@@ -1,0 +1,76 @@
+{% import 'secret-santa/_macros/status.twig' as status %}
+
+<table class="data fullwidth">
+	<thead>
+		<tr>
+			<th>{{ 'Member'|t }}</th>
+			<th>{{ 'Status'|t }}</th>
+			<th>{{ 'Wishlist'|t }}</th>
+			<th>{{ 'Invited'|t }}</th>
+			<th>{{ 'Accepted'|t }}</th>
+			<th class="thin"></th>
+		</tr>
+	</thead>
+
+	<tbody>
+    {% for member in members %}
+		
+		{% set user = craft.users.id(member.userId).one() %}
+
+      <tr>
+        <th scope="row">
+          <a href="{{ cpUrl('secret-santa/group/' ~ group.id ~ '/member/' ~ member.id) }}">
+            {{ user.fullName ?? user.username }}
+          </a>
+        </th>
+
+    		<td>
+    		  {% if member.dateAccepted %}
+    		    {{ status.statusLabel('Accepted'|t, 'green') }}
+    		  {% elseif member.dateInvited %}
+    		    {{ status.statusLabel('Invited'|t, 'blue') }}
+    		  {% else %}
+    		    {{ status.statusLabel('New'|t, 'gray') }}
+    		  {% endif %}
+    		</td>
+
+        <td>
+        <div class="chip small chromeless">
+          <div class="chip-content">
+            {% if member.wishlistRefused %}
+            {{ status.statusBullet('Refused'|t, 'inactive') }}
+          {% elseif member.wishlist %}
+            {{ status.statusBullet('Refused'|t, 'active') }}
+          {% else %}
+            {{ status.statusBullet('Refused'|t, 'pending') }}
+          {% endif %}
+          </div>
+        </div>
+        </td>
+
+        <td>
+          {{ member.dateInvited ? member.dateInvited|date('short') : '—' }}
+        </td>
+
+        <td>
+          {{ member.dateAccepted ? member.dateAccepted|date('short') : '—' }}
+        </td>
+
+        <td class="thin">
+          <button
+            type="button"
+            class="btn small icon delete"
+            data-member-id="{{ member.id }}"
+            title="{{ 'Remove'|t }}"
+          ></button>
+        </td>
+      </tr>
+    {% else %}
+      <tr>
+        <td colspan="6" class="light">
+          {{ 'No members yet.'|t }}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

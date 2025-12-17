@@ -1,0 +1,71 @@
+{% requireAdmin true %}
+
+{#{% extends '_layouts/cp.twig' %}#}
+
+{% set title = 'Email Settings'|t('secret-santa') %}
+{% set readOnly = readOnly ?? false %}
+{% set fullPageForm = not readOnly %}
+
+{% set crumbs = [
+    { label: "Settings"|t('secret-santa'), url: url('settings') }
+] %}
+
+{% set formActions = [
+    {
+        label: 'Save and continue editing'|t('secret-santa'),
+        redirect: 'settings/email'|hash,
+        shortcut: true,
+        retainScroll: true,
+    },
+] %}
+
+{% import "_includes/forms" as forms %}
+
+{% if settings is not defined %}
+    {% set settings = craft.app.projectConfig.get('email') %}
+    {% set freshSettings = true %}
+{% else %}
+    {% set freshSettings = false %}
+{% endif %}
+
+{% block content %}
+
+    {{ forms.autosuggestField({
+        first: true,
+        label: "Sender Email Address"|t('secret-santa'),
+        instructions: "The email address Craft CMS will use when sending email."|t('secret-santa'),
+        id: 'fromEmail',
+        name: 'fromEmail',
+        suggestEnvVars: true,
+        value: settings.fromEmail,
+        autofocus: true,
+        required: true,
+        errors: (freshSettings ? null : settings.getErrors('fromEmail')),
+        disabled: readOnly,
+    }) }}
+
+    {{ forms.autosuggestField({
+        label: "Sender Name"|t('secret-santa'),
+        instructions: "The “From” name Craft CMS will use when sending email."|t('secret-santa'),
+        id: 'fromName',
+        name: 'fromName',
+        suggestEnvVars: true,
+        value: settings.fromName,
+        required: true,
+        errors: (freshSettings ? null : settings.getErrors('fromName')),
+        disabled: readOnly,
+    }) }}
+
+    {{ forms.autosuggestField({
+        label: "HTML Email Template"|t('secret-santa'),
+        instructions: "The template which Secret Santa will use for HTML emails"|t('secret-santa'),
+        id: 'mailtemplate',
+        name: 'mailtemplate',
+        suggestTemplates: true,
+        suggestEnvVars: true,
+        value: settings.mailtemplate,
+        errors: (freshSettings ? null : settings.getErrors('mailtemplate')),
+        disabled: readOnly,
+    }) }}
+
+{% endblock %}

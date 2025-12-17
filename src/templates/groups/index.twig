@@ -1,0 +1,12 @@
+{# templates/secret-santa/groups/index.twig #}
+{% extends '_layouts/elementindex' %}
+
+{% set elementType = 'nibiru\\secretsanta\\elements\\SantaGroupElement' %}
+{% set title = 'Groups'|t('secret-santa') %}
+{% set selectedSubnavItem = 'groups' %}
+
+{% block actionButton %}
+  <a href="{{ cpUrl('secret-santa/groups/new') }}" class="btn submit add icon">
+    {{ 'New group'|t('secret-santa') }}
+  </a>
+{% endblock %}

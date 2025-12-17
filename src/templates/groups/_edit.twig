@@ -1,0 +1,101 @@
+{% extends '_layouts/cp' %}
+
+{% set allUserCount = craft.users.status(null).count() %}
+{% set existingUserIds = members|map(m => m.userId|integer)|values %}
+{% set selectableCount = allUserCount - existingUserIds|length %}
+
+{% set isNew = not group.id %}
+{% set title = isNew
+    ? 'New group'|t('secret-santa')
+    : group.title
+%}
+
+{% block content %}
+<form method="post" accept-charset="UTF-8">
+    {{ csrfInput() }}
+    {{ actionInput('secret-santa/groups/save') }}
+    {{ redirectInput('secret-santa/groups') }}
+
+    {% if not isNew %}
+        {{ hiddenInput('groupId', group.id) }}
+    {% endif %}
+
+    <div class="field">
+        <div class="heading">
+            <label for="title">{{ 'Title'|t('app') }}</label>
+        </div>
+        <div class="input">
+            <input
+                id="title"
+                name="title"
+                class="text fullwidth"
+                value="{{ group.title ?? '' }}"
+                autofocus
+                required
+            >
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button type="submit" class="btn submit">
+            {{ 'Save'|t('app') }}
+        </button>
+    </div>
+</form>
+
+{% if not isNew %}
+  <hr>
+
+  <h2>{{ 'Members'|t }}</h2>
+
+  <p>
+    <button type="button" class="btn add icon" id="add-member-btn">
+      {{ 'Add member'|t }}
+    </button>
+  </p>
+
+  {# render your members table here #}
+  {% include 'secret-santa/groups/_memberTable' with { group, members } %}
+{% else %}
+  <p class="warning">
+    {{ 'Save the group first to add members.'|t('secret-santa') }}
+  </p>
+{% endif %}
+{% endblock %}
+
+{% if not isNew %}
+{% js %}
+(() => {
+  const groupId = {{ group.id }};
+  const existingUserIds = {{ existingUserIds|json_encode|raw }};
+
+  const btn = document.getElementById('add-member-btn');
+  if (!btn) return;
+
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    Craft.createElementSelectorModal('craft\\elements\\User', {
+      sources: '*',
+      multiSelect: false,
+      closeOnSelect: true,
+
+      disabledElementIds: existingUserIds,
+
+      onSelect(elements) {
+        if (!elements?.length) return;
+
+        const userId = parseInt(elements[0].id, 10);
+
+        Craft.postActionRequest(
+          'secret-santa/admin/add-member',
+          { groupId, userId },
+          () => window.location.reload()
+        );
+      },
+    });
+  });
+})();
+{% endjs %}
+{% endif %}
+

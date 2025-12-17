@@ -1,0 +1,28 @@
+<h1>Hello {{ member.user.friendlyName }}</h1>
+
+{% if member.status == 'pending' %}
+  <p>Please confirm participation:</p>
+  <a href="?accept=1">Accept</a> | <a href="?decline=1">Decline</a>
+{% endif %}
+
+<form method="post">
+    {{ csrfInput() }}
+    <input type="hidden" name="action" value="secret-santa/public/save-wishlist">
+    <input type="hidden" name="token" value="{{ member.token }}">
+
+    <label>Wishlist</label>
+    <textarea name="wishlist">{{ member.wishlist }}</textarea>
+
+    <label>
+      <input type="checkbox" name="ready" value="1" {{ member.readyForDraw ? 'checked' }}>
+      I'm ready for the draw
+    </label>
+
+    <button>Save</button>
+</form>
+
+{% if member.assignedUserId %}
+  <hr>
+  <h3>Your Assignment</h3>
+  <p>You will be Secret Santa for <strong>{{ craft.users.id(member.assignedUserId).one().friendlyName }}</strong>.</p>
+{% endif %}

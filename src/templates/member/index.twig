@@ -1,0 +1,83 @@
+
+
+{% if member.dateAccepted %}
+    {% set memberState = 'accepted'|t %}
+{% elseif member.dateInvited %}
+    {% set memberState = 'invited'|t %}
+{% else %}
+    {% set memberState = 'new'|t %}
+{% endif %}
+
+{% extends '_layouts/cp' %}
+{% set title = member.user.fullName ?? member.user.username %}
+
+
+{% block content %}
+{# <div class="pane">
+
+</div> #}
+<div class="flex">
+
+  {# Main content #}
+  <div class="flex-grow">
+
+    <h1 class="mb-2">
+      {{ member.user.fullName ?? member.user.username }}
+    </h1>
+
+    <p class="light">
+      {{ 'Member of group'|t }}:
+      <strong>{{ group.title }}</strong>
+    </p>
+
+    <hr>
+
+    {# Status #}
+    <h2>{{ 'Status'|t }}</h2>
+
+    {% if member.dateAccepted %}
+      <span class="status-label green">{{ 'Accepted'|t }}</span>
+    {% elseif member.dateInvited %}
+      <span class="status-label blue">{{ 'Invited'|t }}</span>
+    {% else %}
+      <span class="status-label gray">{{ 'New'|t }}</span>
+    {% endif %}
+
+    <hr>
+
+    {# Wishlist #}
+    <h2>{{ 'Wishlist'|t }}</h2>
+
+    {% if member.wishlistRefused %}
+      <p class="light">
+        {{ 'Member chose not to provide a wishlist.'|t }}
+      </p>
+    {% elseif member.wishlist %}
+      <div class="readable">
+        {{ member.wishlist|raw }}
+      </div>
+    {% else %}
+      <p class="light">
+        {{ 'No wishlist yet.'|t }}
+      </p>
+    {% endif %}
+
+  </div>
+
+  {# Meta sidebar #}
+  <div class="flex-shrink-0 meta">
+
+    <dl class="meta read-only">
+
+      <dt>{{ 'Invited'|t }}</dt>
+      <dd>{{ member.dateInvited ? member.dateInvited|datetime : '—' }}</dd>
+
+      <dt>{{ 'Accepted'|t }}</dt>
+      <dd>{{ member.dateAccepted ? member.dateAccepted|datetime : '—' }}</dd>
+
+    </dl>
+
+  </div>
+
+</div>
+{% endblock %}

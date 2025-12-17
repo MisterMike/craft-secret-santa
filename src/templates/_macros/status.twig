@@ -1,0 +1,10 @@
+{% macro statusLabel(label, color) %}
+  <span class="status-label {{ color }}">
+    <span class="status {{ color }}"></span>
+    <span class="status-label-text">{{ label }}</span>
+  </span>
+{% endmacro %}
+
+{% macro statusBullet(label, status) %}
+  <span class="status {{ status }}" role="img" aria-label="Status: {{ label }}"></span>
+{% endmacro %}
