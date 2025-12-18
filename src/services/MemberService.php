@@ -3,28 +3,47 @@ namespace nibiru\secretsanta\services;
 
 use Craft;
 use craft\base\Component;
+use nibiru\secretsanta\SecretSanta;
+use nibiru\secretsanta\elements\SantaGroupElement;
 use nibiru\secretsanta\models\SantaMember;
 use nibiru\secretsanta\records\SantaMemberRecord;
 
 class MemberService extends Component
 {
-    public function addMember(int $groupId, int $userId): void
+public function addMember(int $groupId, int $userId): void
     {
+        $group = SantaGroupElement::find()
+            ->id($groupId)
+            ->one();
+
+        if (!$group) {
+            throw new NotFoundHttpException('Group not found');
+        }
+
+        // can we add the member ?
+        SecretSanta::$plugin->groupGuard->canAddMember($group);
 
         $exists = SantaMemberRecord::find()
-            ->where(['groupId' => $groupId, 'userId' => $userId])
+            ->where([
+                'groupId' => $group->id,
+                'userId' => $userId,
+            ])
             ->exists();
 
         if ($exists) {
-            Craft::$app->session->setNotice("User already in group.");
+            Craft::$app->session->setNotice(
+                Craft::t('secret-santa', 'User already in group.')
+            );
             return;
         }
 
         $record = new SantaMemberRecord();
-        $record->groupId = $groupId;
+        $record->groupId = $group->id;
         $record->userId = $userId;
         $record->token = Craft::$app->security->generateRandomString(48);
         $record->save();
+
+        $this->updateGroupStatus($group);
     }
 
     public function getMemberById(int $id): ?SantaMember
@@ -43,13 +62,13 @@ class MemberService extends Component
 
     public function removeMemberById(int $groupId, int $userId): int
     {
+        $this->updateGroupStatus($groupId);
+
         return SantaMemberRecord::deleteAll([
             'groupId' => $groupId,
             'userId' => $userId,
         ]);
     }
-
-
 
     public function getMembersByGroupId(int $groupId): array
     {
@@ -75,6 +94,21 @@ class MemberService extends Component
 
 
     /* Private Stuff */
+
+    private function updateGroupStatus(SantaGroupElement $group): void
+    {
+        $count = $group->getMembersCount();
+
+        if ($count < 2) {
+            $group->groupStatus = 'draft';
+        } elseif ($group->groupStatus === 'draft') {
+            $group->groupStatus = 'ready';
+        }
+
+        SecretSanta::info("updateGroupStatus:".$group->groupStatus);
+
+        Craft::$app->getElements()->saveElement($group, false);
+    }
 
     private function createModelFromRecord(SantaMemberRecord $record): SantaMember
     {

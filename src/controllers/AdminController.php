@@ -5,7 +5,9 @@ use Craft;
 use craft\elements\User;
 use craft\web\Controller;
 use craft\web\Response; 
+
 use nibiru\secretsanta\SecretSanta;
+use nibiru\secretsanta\elements\SantaGroupElement;
 
 class AdminController extends Controller
 {
@@ -69,19 +71,42 @@ class AdminController extends Controller
     }
 
 
-    public function actionAddMember()
+    public function actionAddMember(): Response
     {
-
         $this->requirePostRequest();
 
-        $userId     = Craft::$app->request->getRequiredBodyParam('userId');
-        $groupId    = Craft::$app->request->getRequiredBodyParam('groupId');
+        $request = Craft::$app->getRequest();
+
+        $groupId = (int)$request->getRequiredBodyParam('groupId');
+        $userId  = (int)$request->getRequiredBodyParam('userId');
+
+        // Resolve group once, early
+        $group = SantaGroupElement::find()
+            ->id($groupId)
+            ->one();
+
+        if (!$group) {
+            throw new NotFoundHttpException('Group not found.');
+        }
+
+        // No changes allowed after draw has taken place
+        if ($group->groupStatus === 'drawn') {
+            Craft::$app->session->setError(
+                Craft::t('secret-santa', 'Members cannot be added after names have been drawn.')
+            );
+
+            return $this->redirect("secret-santa/group/{$groupId}");
+        }
 
         SecretSanta::$plugin->member->addMember($groupId, $userId);
 
-        Craft::$app->session->setNotice("Member added.");
+        Craft::$app->session->setNotice(
+            Craft::t('secret-santa', 'Member added.')
+        );
+
         return $this->redirect("secret-santa/group/{$groupId}");
     }
+
 
     public function actionRemoveMember()
     {
@@ -104,8 +129,9 @@ class AdminController extends Controller
 
         $group = SecretSanta::$plugin->group->create($title);
 
-        Craft::$app->session->setNotice("Group created successfully.");
+        $notice = Craft::t('secret-santa', 'Group created successfully.');
 
+        Craft::$app->session->setNotice($notice);
         return $this->redirect("secret-santa/group/" . $group->id);
     }
 

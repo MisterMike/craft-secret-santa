@@ -13,6 +13,7 @@ class SantaGroupQuery extends ElementQuery
         $this->query->select([
             'santa_groups.title',
             'santa_groups.enabled',
+            'santa_groups.groupStatus',
         ]);
 
         return parent::beforePrepare();

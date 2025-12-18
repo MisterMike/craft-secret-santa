@@ -48,11 +48,21 @@
 
   <h2>{{ 'Members'|t }}</h2>
 
+  {% if group.canAddMember() %}
   <p>
     <button type="button" class="btn add icon" id="add-member-btn">
-      {{ 'Add member'|t }}
+      {{ 'Add member'|t('secret-santa') }}
     </button>
   </p>
+{% endif %}
+
+  {% if group.canDraw() %}
+  <p>
+    <button type="button" class="btn add icon" id="add-member-btn">
+      {{ 'Draw Secret Santa'|t('secret-santa') }}
+    </button>
+  </p>
+{% endif %}
 
   {# render your members table here #}
   {% include 'secret-santa/groups/_memberTable' with { group, members } %}

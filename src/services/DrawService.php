@@ -26,6 +26,9 @@ class DrawService extends Component
             $giver->save();
         }
 
+        $group->groupStatus = 'drawn';
+        Craft::$app->getElements()->saveElement($group, false);
+
         SecretSanta::$plugin->emails->sendAssignments($members);
 
         return true;

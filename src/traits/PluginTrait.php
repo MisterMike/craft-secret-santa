@@ -17,6 +17,7 @@ use nibiru\secretsanta\SecretSanta;
 use nibiru\secretsanta\services\EmailService;
 use nibiru\secretsanta\services\DrawService;
 use nibiru\secretsanta\services\GroupService;
+use nibiru\secretsanta\services\GroupGuardService;
 use nibiru\secretsanta\services\MemberService;
 
 use yii\base\InvalidConfigException;
@@ -55,6 +56,14 @@ trait PluginTrait
     public function getGroup(): GroupService
     {
         return $this->get('group');
+    }
+
+    /**
+     * @throws InvalidConfigException
+     */
+    public function getGroupGuard(): GroupGuardService
+    {
+        return $this->get('groupGuard');
     }
 
     /**

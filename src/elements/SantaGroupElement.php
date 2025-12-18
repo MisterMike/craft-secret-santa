@@ -6,20 +6,27 @@ use Craft;
 use craft\base\Element;
 use craft\elements\db\ElementQueryInterface;
 use craft\elements\User;
+use craft\helpers\Cp;
 use craft\helpers\Db;
 use craft\helpers\UrlHelper;
+
+use nibiru\secretsanta\SecretSanta;
 use nibiru\secretsanta\elements\db\SantaGroupQuery;
+use nibiru\secretsanta\records\SantaMemberRecord;
+
+use yii\web\ForbiddenHttpException;
 
 class SantaGroupElement extends Element
 {
-    public ?string $title = '';
-    public bool $enabled = true;
+    public ?string $title       = '';
+    public bool $enabled        = true;
+    public string $groupStatus  = 'draft';
 
     /* ================== Meta ================== */
 
     public static function displayName(): string
     {
-        return Craft::t('secret-santa', 'Secret Santa Group');
+        return Craft::t('secret-santa', 'Gruppe');
     }
 
     public static function pluralDisplayName(): string
@@ -53,6 +60,22 @@ class SantaGroupElement extends Element
         return false;
     }
 
+
+    public static function statuses(): array
+    {
+        return [
+            'draft' => Craft::t('secret-santa', 'Draft'),
+            'ready' => Craft::t('secret-santa', 'Ready'),
+            'drawn' => Craft::t('secret-santa', 'Drawn'),
+        ];
+    }
+
+
+    public function getStatus(): ?string
+    {
+        return $this->groupStatus;
+    }
+
     public function canView(User $user): bool
     {
         return true;
@@ -63,14 +86,26 @@ class SantaGroupElement extends Element
         return true;
     }
 
+    public function canAddMember(): bool
+    {
+        return SecretSanta::$plugin
+            ->getGroupGuard()
+            ->canAddMember($this);
+    }
+
+    public function canDraw(): bool
+    {
+        return SecretSanta::$plugin->groupGuard->canDraw($this);
+    }
+
+    public function canResendDraw(): bool
+    {
+        return in_array($this->groupStatus, ['drawn', 'completed'], true);
+    }
+
     public static function find(): ElementQueryInterface
     {
         return new SantaGroupQuery(static::class);
-    }
-
-    protected function cpEditUrl(): ?string
-    {
-        return UrlHelper::cpUrl('secret-santa/groups/' . $this->id);
     }
 
     public function afterSave(bool $isNew): void
@@ -81,6 +116,7 @@ class SantaGroupElement extends Element
                     'id' => $this->id,
                     'title' => $this->title,
                     'enabled' => $this->enabled,
+                    'groupStatus' => $this->groupStatus ?? 'draft',
                     'dateCreated' => Db::prepareDateForDb($this->dateCreated),
                     'dateUpdated' => Db::prepareDateForDb($this->dateUpdated),
                     'uid' => $this->uid,
@@ -91,6 +127,7 @@ class SantaGroupElement extends Element
                 ->update('{{%santa_groups}}', [
                     'title' => $this->title,
                     'enabled' => $this->enabled,
+                    'groupStatus' => $this->groupStatus ?? 'draft',
                     'dateUpdated' => Db::prepareDateForDb($this->dateUpdated),
                 ], ['id' => $this->id])
                 ->execute();
@@ -98,6 +135,15 @@ class SantaGroupElement extends Element
 
         parent::afterSave($isNew);
 
+    }
+
+    public function afterPopulate(): void
+    {
+        parent::afterPopulate();
+
+        if ($this->groupStatus === null) {
+            $this->groupStatus = 'draft';
+        }
     }
 
 
@@ -115,10 +161,82 @@ class SantaGroupElement extends Element
         ];
     }
 
+    /* HELPERS */
+
+
+    public function allMembersAccepted(SantaGroupElement $group): bool
+    {
+        // Fetch all members of the group
+        $members = SantaMemberRecord::find()
+            ->where(['groupId' => $group->id])
+            ->all();
+
+        // No members? Definitely not accepted.
+        if (!$members) {
+            return false;
+        }
+
+        foreach ($members as $member) {
+            // Adjust the field name if yours differs
+            if (!$member->dateAccepted) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    public function getMembersCount(): int
+    {
+        return SantaMemberRecord::find()
+            ->where(['groupId' => $this->id])
+            ->count();
+    }
+
+    public function getAttributeHtml(string $attribute): string
+    {
+        if ($attribute === 'status') {
+            $status = $this->getStatus();
+
+            return Cp::statusLabelHtml([
+                'label' => static::statuses()[$status] ?? $status,
+                'color' => match ($status) {
+                    'ready' => 'teal',
+                    'drawn' => 'red',
+                    'draft' => 'orange',
+                    default => 'gray',
+                },
+            ]);
+        }
+
+        return parent::getAttributeHtml($attribute);
+    }
+
+    public function getTableAttributeHtml(string $attribute): string
+    {
+        return match ($attribute) {
+            'membersCount' => (string)$this->getMembersCount(),
+            'status' => $this->getStatusHtml(),
+            default => parent::getTableAttributeHtml($attribute),
+        };
+    }
+
+
+    /* PROTECTED STUFF */
+
+    protected function defineAttributes(): array
+    {
+        return array_merge(parent::defineAttributes(), [
+            'status' => 'string',
+        ]);
+    }
+
     protected static function defineTableAttributes(): array
     {
         return [
-            'title' => ['label' => Craft::t('app', 'Title')],
+            'membersCount' => ['label' => Craft::t('secret-santa', 'Members')],
+            'status' => ['label' => Craft::t('secret-santa', 'Status')],
             'dateCreated' => ['label' => Craft::t('app', 'Date Created')],
         ];
     }
@@ -126,14 +244,37 @@ class SantaGroupElement extends Element
     protected static function defineAvailableTableAttributes(): array
     {
         return [
-            'title' => Craft::t('app', 'Title3'),
-            'dateCreated' => Craft::t('app', 'Date Created'),
+            'membersCount' => Craft::t('secret-santa', 'Members'),
+            'groupStatus' => Craft::t('secret-santa', 'Status'),
+            'status' => Craft::t('app', 'Date Created'),
         ];
     }
 
     protected static function defineDefaultTableAttributes(string $source): array
     {
-        return ['title', 'dateCreated'];
+        return ['membersCount', 'status', 'dateCreated'];
     }
+
+    protected function getGroupStatusHtml(): string
+    {
+        $status = $this->groupStatus ?? 'draft';
+
+        return Cp::statusLabelHtml(
+            match ($status) {
+                'ready' => 'green',
+                'drawn' => 'orange',
+                'completed' => 'blue',
+                default => 'gray',
+            },
+            Craft::t('secret-santa', ucfirst($status))
+        );
+    }
+
+    protected function cpEditUrl(): ?string
+    {
+        return UrlHelper::cpUrl('secret-santa/groups/' . $this->id);
+    }
+
+
 }
 

@@ -23,6 +23,7 @@ use nibiru\secretsanta\elements\SantaGroupElement;
 use nibiru\secretsanta\services\DrawService;
 use nibiru\secretsanta\services\EmailService;
 use nibiru\secretsanta\services\GroupService;
+use nibiru\secretsanta\services\GroupGuardService;
 use nibiru\secretsanta\services\MemberService;
 
 use nibiru\secretsanta\models\SettingsModel;
@@ -43,10 +44,11 @@ class SecretSanta extends Plugin
     {
         return [
             'components' => [
-                'draw' => DrawService::class,
-                'email' => EmailService::class,
-                'group' => GroupService::class,
-                'member' => MemberService::class,
+                'draw'          => DrawService::class,
+                'email'         => EmailService::class,
+                'group'         => GroupService::class,
+                'groupGuard'    => GroupGuardService::class,
+                'member'        => MemberService::class,
             ],
         ];
     }
