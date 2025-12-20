@@ -48,7 +48,7 @@
 
   <h2>{{ 'Members'|t }}</h2>
 
-  {% if group.canAddMember() %}
+  {% if group.canModify() %}
   <p>
     <button type="button" class="btn add icon" id="add-member-btn">
       {{ 'Add member'|t('secret-santa') }}

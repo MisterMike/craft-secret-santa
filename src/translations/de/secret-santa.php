@@ -1,5 +1,6 @@
 <?php 
 	return [
+		'New' => 'Neu',
 		'Groups' => 'Gruppen',
 		'All groups' => 'Alle Gruppen',
 		'New group' => 'Neue Gruppe',
@@ -8,4 +9,10 @@
 		'Members' => 'Mitglieder',
 		'Status' => 'Status',
 		'Date created' => 'Erstellungsdatum',
+		'Draft' => 'Entwurf',
+		'Ready' => 'Bereit',
+		'Drawn' => 'Ausgelost',
+		'Accepted' => 'Akzeptiert',
+		'Invited' => 'Eingeladen',
+		'Emails' => 'E-Mails',
 	];

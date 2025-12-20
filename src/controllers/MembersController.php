@@ -7,7 +7,7 @@ use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use nibiru\secretsanta\SecretSanta;
 
-class MemberController extends Controller
+class MembersController extends Controller
 {
     // CP only
     protected array|int|bool $allowAnonymous = false;
@@ -30,6 +30,29 @@ class MemberController extends Controller
         return $this->renderTemplate('secret-santa/member/index', [
             'group'  => $group,
             'member' => $member,
+        ]);
+    }
+
+    /* 
+     * Remove a member from a group 
+     */
+    public function actionRemoveMember(): Response
+    {
+        $this->requirePostRequest();
+        $this->requireAcceptsJson();
+
+        $userId = Craft::$app->request->getRequiredBodyParam('userId');
+        $groupId  = Craft::$app->request->getRequiredBodyParam('groupId');
+
+        SecretSanta::getInstance()
+            ->member
+            ->removeMemberById(
+                (int)$groupId,
+                (int)$userId
+            );
+
+        return $this->asJson([
+            'success' => true,
         ]);
     }
 }

@@ -19,6 +19,7 @@ use yii\base\Event;
 use yii\log\Dispatcher;
 
 use nibiru\secretsanta\elements\SantaGroupElement;
+use nibiru\secretsanta\elements\SantaEmailTemplateElement;
 
 use nibiru\secretsanta\services\DrawService;
 use nibiru\secretsanta\services\EmailService;
@@ -28,6 +29,7 @@ use nibiru\secretsanta\services\MemberService;
 
 use nibiru\secretsanta\models\SettingsModel;
 use nibiru\secretsanta\traits\PluginTrait;
+use nibiru\secretsanta\twig\SecretSantaTwigExtension;
 use nibiru\secretsanta\variables\SecretSantaVariable;
 
 class SecretSanta extends Plugin
@@ -72,6 +74,8 @@ class SecretSanta extends Plugin
         //     'emails' => EmailService::class,
         // ]);
 
+        Craft::$app->view->registerTwigExtension(new SecretSantaTwigExtension());
+
     }
 
     public function getPluginName(): string
@@ -98,7 +102,6 @@ class SecretSanta extends Plugin
      */
     private function registerEventHandlers(): void
     {
-
     }
 
     /**
@@ -109,6 +112,7 @@ class SecretSanta extends Plugin
         Event::on(Elements::class, Elements::EVENT_REGISTER_ELEMENT_TYPES,
             function(RegisterComponentTypesEvent $event) {
                 $event->types[] = SantaGroupElement::class;
+                $event->types[] = SantaEmailTemplateElement::class;
             }
         );
 
@@ -123,13 +127,26 @@ class SecretSanta extends Plugin
             function(RegisterUrlRulesEvent $event) {
                 $event->rules['santa/<token:[A-Za-z0-9_-]+>'] = 'secret-santa/public/landing';
                 $event->rules['secret-santa'] = 'secret-santa/groups/index';
+                
                 $event->rules['secret-santa/new'] = 'secret-santa/admin/new-group';
                 $event->rules['secret-santa/group/<groupId:\d+>'] = 'secret-santa/admin/group';
                 $event->rules['secret-santa/draw/<groupId:\d+>'] = 'secret-santa/admin/draw';
-                $event->rules['secret-santa/group/<groupId:\d+>/member/<memberId:\d+>'] = 'secret-santa/member/index';
+                $event->rules['secret-santa/group/<groupId:\d+>/member/<memberId:\d+>'] = 'secret-santa/members/index';
                 $event->rules['secret-santa/groups'] = 'secret-santa/groups/index';
                 $event->rules['secret-santa/groups/<groupId:\d+>'] = 'secret-santa/groups/edit';
                 $event->rules['secret-santa/groups/new'] = 'secret-santa/groups/edit';
+
+                // Index page (template)
+                $event->rules['secret-santa/emails'] = ['template' => 'secret-santa/emails/index'];
+
+                // Edit + New (controller)
+                $event->rules['secret-santa/emails/edit'] = 'secret-santa/emails/edit';
+                $event->rules['secret-santa/emails/<emailId:\d+>'] = 'secret-santa/emails/edit';
+
+                // Save (controller action)
+                $event->rules['secret-santa/emails/save'] = 'secret-santa/emails/save';
+
+
             }
         );
     }
@@ -168,6 +185,10 @@ class SecretSanta extends Plugin
             'groups' => [
                 'label' => Craft::t('secret-santa', 'Groups'),
                 'url' => 'secret-santa/groups',
+            ],
+            'emails' => [
+                'label' => Craft::t('secret-santa', 'Emails'),
+                'url' => 'secret-santa/emails',
             ],
         ];
 

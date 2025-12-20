@@ -26,11 +26,11 @@
 
     		<td>
     		  {% if member.dateAccepted %}
-    		    {{ status.statusLabel('Accepted'|t, 'green') }}
+    		    {{ status.statusLabel('Accepted'|t('secret-santa'), 'green') }}
     		  {% elseif member.dateInvited %}
-    		    {{ status.statusLabel('Invited'|t, 'blue') }}
+    		    {{ status.statusLabel('Invited'|t('secret-santa'), 'blue') }}
     		  {% else %}
-    		    {{ status.statusLabel('New'|t, 'gray') }}
+    		    {{ status.statusLabel('New'|t('secret-santa'), 'gray') }}
     		  {% endif %}
     		</td>
 
@@ -59,10 +59,12 @@
         <td class="thin">
           <button
             type="button"
-            class="btn small icon delete"
-            data-member-id="{{ member.id }}"
+            class="btn small icon delete js-remove-member"
+            data-user-id="{{ user.id }}"
+            data-group-id="{{ group.id }}"
             title="{{ 'Remove'|t }}"
-          ></button>
+        ></button>
+
         </td>
       </tr>
     {% else %}
@@ -74,3 +76,55 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% js %}
+(() => {
+    const buttons = document.querySelectorAll('.js-remove-member');
+
+    buttons.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.userId;
+            const groupId = btn.dataset.groupId;
+
+            if (!userId || !groupId) {
+                return;
+            }
+
+            const confirmed = confirm(
+                Craft.t('secret-santa', 'Remove this member from the group?')
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await Craft.postActionRequest(
+                    'secret-santa/member/remove-member',
+                    {
+                        userId,
+                        groupId,
+                    }
+                );
+
+                if (response?.success) {
+                    // Remove the table row
+                    const row = btn.closest('tr');
+                    row?.remove();
+
+                    Craft.cp.displayNotice(
+                        Craft.t('secret-santa', 'Member removed.')
+                    );
+                } else {
+                    throw new Error('Request failed');
+                }
+            } catch (e) {
+                Craft.cp.displayError(
+                    Craft.t('secret-santa', 'Could not remove member.')
+                );
+            }
+        });
+    });
+})();
+{% endjs %}
+

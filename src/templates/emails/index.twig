@@ -1,0 +1,22 @@
+{% extends "_layouts/elementindex" %}
+
+{% set elementType = 'nibiru\\secretsanta\\elements\\SantaEmailTemplateElement' %}
+{% set title = "Emails"|t('secret-santa') %}
+{% set selectedSubnavItem = 'emails' %}
+
+{% set sources = [
+    {
+        key: '*',
+        label: "All email templates"|t('secret-santa'),
+        criteria: {}
+    }
+] %}
+
+{% set showSiteMenu = false %}
+{% set showStatusMenu = false %}
+
+{% block actionButton %}
+  <a href="{{ cpUrl('secret-santa/emails/edit') }}" class="btn submit add icon">
+    {{ 'New email template'|t('secret-santa') }}
+  </a>
+{% endblock %}

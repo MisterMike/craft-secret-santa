@@ -9,16 +9,17 @@ use yii\base\Exception;
 
 class GroupGuardService extends Component
 {
-    public function canAddMember(SantaGroupElement $group): bool
+
+    public function canModify(SantaGroupElement $group): bool
     {
-        return $group->groupStatus !== 'drawn';
+        return $group->groupStatus !== SantaGroupElement::STATUS_DRAWN;
     }
 
-    public function ensureCanAddMember(SantaGroupElement $group): void
+    public function ensureCanModify(SantaGroupElement $group): void
     {
-        if (!$this->canAddMember($group)) {
+        if (!$this->canModify($group)) {
             throw new ForbiddenHttpException(
-                Craft::t('secret-santa', 'This group is already drawn.')
+                Craft::t('secret-santa', 'This group can no longer be modified.')
             );
         }
     }
@@ -26,7 +27,7 @@ class GroupGuardService extends Component
     public function canDraw(SantaGroupElement $group): bool
     {
         return
-            $group->groupStatus === 'ready'
+            $group->groupStatus === SantaGroupElement::STATUS_READY
             && $group->getMembersCount() >= 2
             && $group->allMembersAccepted($group);
     }

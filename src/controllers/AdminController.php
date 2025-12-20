@@ -108,18 +108,18 @@ class AdminController extends Controller
     }
 
 
-    public function actionRemoveMember()
-    {
-        $this->requirePostRequest();
+    // public function actionRemoveMember()
+    // {
+    //     $this->requirePostRequest();
 
-        $userId     = Craft::$app->request->getRequiredBodyParam('userId');
-        $groupId    = Craft::$app->request->getRequiredBodyParam('groupId');
+    //     $userId     = Craft::$app->request->getRequiredBodyParam('userId');
+    //     $groupId    = Craft::$app->request->getRequiredBodyParam('groupId');
 
-        SecretSanta::$plugin->member->removeMemberById($groupId,$userId);
+    //     SecretSanta::$plugin->member->removeMemberById($groupId,$userId);
 
-        Craft::$app->session->setNotice('Member removed.');
-        return $this->redirect("secret-santa/group/{$groupId}");
-    }
+    //     Craft::$app->session->setNotice('Member removed.');
+    //     return $this->redirect("secret-santa/group/{$groupId}");
+    // }
 
     public function actionCreateGroup()
     {

@@ -6,6 +6,7 @@ use Craft;
 use craft\base\Element;
 use craft\elements\db\ElementQueryInterface;
 use craft\elements\User;
+use craft\enums\Color;
 use craft\helpers\Cp;
 use craft\helpers\Db;
 use craft\helpers\UrlHelper;
@@ -21,6 +22,10 @@ class SantaGroupElement extends Element
     public ?string $title       = '';
     public bool $enabled        = true;
     public string $groupStatus  = 'draft';
+
+    public const STATUS_DRAFT  = 'draft';
+    public const STATUS_READY  = 'ready';
+    public const STATUS_DRAWN  = 'drawn';
 
     /* ================== Meta ================== */
 
@@ -60,16 +65,41 @@ class SantaGroupElement extends Element
         return false;
     }
 
-
-    public static function statuses(): array
+    /**
+     * Central mapping: status -> CP label + color (+ optional icon)
+     */
+    public static function statusBadges(): array
     {
         return [
-            'draft' => Craft::t('secret-santa', 'Draft'),
-            'ready' => Craft::t('secret-santa', 'Ready'),
-            'drawn' => Craft::t('secret-santa', 'Drawn'),
+            self::STATUS_DRAFT => [
+                'label' => Craft::t('secret-santa', 'Draft'),
+                'color' => Color::Orange,
+                'icon'  => null,
+            ],
+            self::STATUS_READY => [
+                'label' => Craft::t('secret-santa', 'Ready'),
+                'color' => Color::Green,
+                'icon'  => null,
+            ],
+            self::STATUS_DRAWN => [
+                'label' => Craft::t('secret-santa', 'Drawn'),
+                'color' => Color::Blue,
+                'icon'  => null,
+            ],
         ];
     }
 
+    public function getStatusBadgeConfig(): array
+    {
+        $badges = self::statusBadges();
+
+        $config = $badges[$this->groupStatus] ?? [
+            'label' => Craft::t('secret-santa', 'Unknown'),
+            'color' => Color::Gray,
+        ];
+
+        return $config;
+    }
 
     public function getStatus(): ?string
     {
@@ -86,11 +116,16 @@ class SantaGroupElement extends Element
         return true;
     }
 
-    public function canAddMember(): bool
+    public function canDelete(User $user): bool
+    {
+        return true;
+    }
+
+    public function canModify(): bool
     {
         return SecretSanta::$plugin
             ->getGroupGuard()
-            ->canAddMember($this);
+            ->canModify($this);
     }
 
     public function canDraw(): bool
@@ -106,6 +141,11 @@ class SantaGroupElement extends Element
     public static function find(): ElementQueryInterface
     {
         return new SantaGroupQuery(static::class);
+    }
+
+    public function isDrawn(): bool
+    {
+        return $this->groupStatus === self::STATUS_DRAWN;
     }
 
     public function afterSave(bool $isNew): void
@@ -164,11 +204,11 @@ class SantaGroupElement extends Element
     /* HELPERS */
 
 
-    public function allMembersAccepted(SantaGroupElement $group): bool
+    public function allMembersAccepted(): bool
     {
         // Fetch all members of the group
         $members = SantaMemberRecord::find()
-            ->where(['groupId' => $group->id])
+            ->where(['groupId' => $this->id])
             ->all();
 
         // No members? Definitely not accepted.
@@ -194,30 +234,48 @@ class SantaGroupElement extends Element
             ->count();
     }
 
+    // public function getAttributeHtml(string $attribute): string
+    // {
+    //     if ($attribute === 'status') {
+    //         $status = $this->getStatus();
+
+    //         return Cp::statusLabelHtml([
+    //             'label' => static::statuses()[$status] ?? $status,
+    //             'color' => match ($status) {
+    //                 'ready' => 'teal',
+    //                 'drawn' => 'red',
+    //                 'draft' => 'orange',
+    //                 default => 'gray',
+    //             },
+    //         ]);
+    //     }
+
+    //     return parent::getAttributeHtml($attribute);
+    // }
+
     public function getAttributeHtml(string $attribute): string
     {
-        if ($attribute === 'status') {
-            $status = $this->getStatus();
-
-            return Cp::statusLabelHtml([
-                'label' => static::statuses()[$status] ?? $status,
-                'color' => match ($status) {
-                    'ready' => 'teal',
-                    'drawn' => 'red',
-                    'draft' => 'orange',
-                    default => 'gray',
-                },
-            ]);
+        if ($attribute === 'groupStatus') {
+            return Cp::statusLabelHtml($this->getStatusBadgeConfig());
         }
 
         return parent::getAttributeHtml($attribute);
     }
 
+    // public function getTableAttributeHtml(string $attribute): string
+    // {
+    //     return match ($attribute) {
+    //         'membersCount' => (string)$this->getMembersCount(),
+    //         'status' => $this->getStatusHtml(),
+    //         default => parent::getTableAttributeHtml($attribute),
+    //     };
+    // }
+
     public function getTableAttributeHtml(string $attribute): string
     {
         return match ($attribute) {
             'membersCount' => (string)$this->getMembersCount(),
-            'status' => $this->getStatusHtml(),
+            'groupStatus' => Cp::statusLabelHtml($this->getStatusBadgeConfig()),
             default => parent::getTableAttributeHtml($attribute),
         };
     }
@@ -228,7 +286,7 @@ class SantaGroupElement extends Element
     protected function defineAttributes(): array
     {
         return array_merge(parent::defineAttributes(), [
-            'status' => 'string',
+            'groupStatus' => 'string',
         ]);
     }
 
@@ -236,39 +294,48 @@ class SantaGroupElement extends Element
     {
         return [
             'membersCount' => ['label' => Craft::t('secret-santa', 'Members')],
-            'status' => ['label' => Craft::t('secret-santa', 'Status')],
+            'groupStatus' => ['label' => Craft::t('secret-santa', 'Status')],
             'dateCreated' => ['label' => Craft::t('app', 'Date Created')],
         ];
     }
+
+    // protected static function defineAvailableTableAttributes(): array
+    // {
+    //     return [
+    //         'membersCount' => Craft::t('secret-santa', 'Members'),
+    //         'groupStatus' => Craft::t('secret-santa', 'Status'),
+    //         'status' => Craft::t('app', 'Date Created'),
+    //     ];
+    // }
 
     protected static function defineAvailableTableAttributes(): array
     {
         return [
             'membersCount' => Craft::t('secret-santa', 'Members'),
             'groupStatus' => Craft::t('secret-santa', 'Status'),
-            'status' => Craft::t('app', 'Date Created'),
+            'dateCreated' => Craft::t('app', 'Date Created'),
         ];
     }
 
     protected static function defineDefaultTableAttributes(string $source): array
     {
-        return ['membersCount', 'status', 'dateCreated'];
+        return ['membersCount', 'groupStatus', 'dateCreated'];
     }
 
-    protected function getGroupStatusHtml(): string
-    {
-        $status = $this->groupStatus ?? 'draft';
+    // protected function getGroupStatusHtml(): string
+    // {
+    //     $status = $this->groupStatus ?? 'draft';
 
-        return Cp::statusLabelHtml(
-            match ($status) {
-                'ready' => 'green',
-                'drawn' => 'orange',
-                'completed' => 'blue',
-                default => 'gray',
-            },
-            Craft::t('secret-santa', ucfirst($status))
-        );
-    }
+    //     return Cp::statusLabelHtml(
+    //         match ($status) {
+    //             'ready' => 'green',
+    //             'drawn' => 'orange',
+    //             'completed' => 'blue',
+    //             default => 'gray',
+    //         },
+    //         Craft::t('secret-santa', ucfirst($status))
+    //     );
+    // }
 
     protected function cpEditUrl(): ?string
     {

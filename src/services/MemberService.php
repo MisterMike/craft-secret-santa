@@ -21,7 +21,7 @@ public function addMember(int $groupId, int $userId): void
         }
 
         // can we add the member ?
-        SecretSanta::$plugin->groupGuard->canAddMember($group);
+        SecretSanta::$plugin->groupGuard->canModify($group);
 
         $exists = SantaMemberRecord::find()
             ->where([
@@ -60,14 +60,21 @@ public function addMember(int $groupId, int $userId): void
     }
 
 
-    public function removeMemberById(int $groupId, int $userId): int
+    public function removeMemberById(int $groupId, int $userId): void
     {
-        $this->updateGroupStatus($groupId);
 
-        return SantaMemberRecord::deleteAll([
+        SantaMemberRecord::deleteAll([
             'groupId' => $groupId,
             'userId' => $userId,
         ]);
+
+        $group = SantaGroupElement::find()
+            ->id($groupId)
+            ->one();
+
+        if ($group) {
+            $this->updateGroupStatus($group);
+        }
     }
 
     public function getMembersByGroupId(int $groupId): array

@@ -11,45 +11,72 @@ class Install extends Migration
 {
     public function safeUp(): bool
     {
+
+        $db = Craft::$app->getDb();
+        
         // Secret Santa Groups (Element table)
-        $this->createTable('{{%santa_groups}}', [
-            'id'            => $this->integer()->notNull(),
-            'title'         => $this->string()->notNull(),
-            'enabled'       => $this->boolean()->defaultValue(true),
-            'groupStatus'   => $this->string(20)->notNull()->defaultValue('draft'),
-            'dateCreated'   => $this->dateTime()->notNull(),
-            'dateUpdated'   => $this->dateTime()->notNull(),
-            'uid'           => $this->uid(),
-        ]);
+        if (!$db->tableExists('{{%santa_groups}}')) {
+            $this->createTable('{{%santa_groups}}', [
+                'id'            => $this->integer()->notNull(),
+                'title'         => $this->string()->notNull(),
+                'enabled'       => $this->boolean()->defaultValue(true),
+                'groupStatus'   => $this->string(20)->notNull()->defaultValue('draft'),
+                'dateCreated'   => $this->dateTime()->notNull(),
+                'dateUpdated'   => $this->dateTime()->notNull(),
+                'uid'           => $this->uid(),
+            ]);
+        }
 
 
         // Members table
-        $this->createTable('{{%santa_members}}', [
-            'id' => $this->primaryKey(),
+        if (!$db->tableExists('{{%santa_members}}')) {
+            $this->createTable('{{%santa_members}}', [
+                'id'            => $this->primaryKey(),
+                'groupId'       => $this->integer()->notNull(),
+                'userId'        => $this->integer()->notNull(),
+                'dateInvited'   => $this->dateTime()->null(),
+                'dateAccepted'  => $this->dateTime()->null(),
+                'dateDrawn'     => $this->dateTime()->null(),
+                'wishlist'      => $this->longText(),
+                'wishlistRefused' => $this->boolean()->defaultValue(false),
 
-            'groupId' => $this->integer()->notNull(),
-            'userId' => $this->integer()->notNull(),
+                // Draw result (references santa_members.id)
+                'drawnMemberId' => $this->integer()->null(),
 
-            // Invitation / flow tracking
-            'dateInvited' => $this->dateTime()->null(),
-            'dateAccepted' => $this->dateTime()->null(),
-            'dateDrawn' => $this->dateTime()->null(),
+                // Invite / accept token
+                'token'         => $this->string(64)->notNull(),
 
-            // Wishlist
-            'wishlist' => $this->longText(),
-            'wishlistRefused' => $this->boolean()->defaultValue(false),
+                // Craft standard columns
+                'dateCreated'   => $this->dateTime()->notNull(),
+                'dateUpdated'   => $this->dateTime()->notNull(),
+                'uid'           => $this->uid(),
+            ]);
+        }
 
-            // Draw result (references santa_members.id)
-            'drawnMemberId' => $this->integer()->null(),
+        // Santa Email Templates
+        if (!$db->tableExists('{{%santa_email_templates}}')) {
+            $this->createTable('{{%santa_email_templates}}', [
+                'id'            => $this->primaryKey(),
+                'title'         => $this->string()->notNull(),
+                'handle'        => $this->string(64)->notNull(),
+                'subject'       => $this->string()->notNull(),
+                'mjmlBody'      => $this->text()->notNull(),
+                'enabled'       => $this->boolean()->notNull()->defaultValue(true),
 
-            // Invite / accept token
-            'token' => $this->string(64)->notNull(),
+                // Craft standard columns
+                'dateCreated'   => $this->dateTime()->notNull(),
+                'dateUpdated'   => $this->dateTime()->notNull(),
+                'uid'           => $this->uid(),
+            ]);
 
-            // Craft standard columns
-            'dateCreated' => $this->dateTime()->notNull(),
-            'dateUpdated' => $this->dateTime()->notNull(),
-            'uid' => $this->uid(),
-        ]);
+            // Unique handle (important!)
+            $this->createIndex(
+                null,
+                '{{%santa_email_templates}}',
+                ['handle'],
+                true
+            );
+        }
 
         // Make `id` the primary key
         $this->addPrimaryKey(null, '{{%santa_groups}}', 'id');
